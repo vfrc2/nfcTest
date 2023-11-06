@@ -1,20 +1,20 @@
-import nfc.nfc as nfc
+import NfcReader
+import yaml
+import os
 
-print('NFC libnfc version ' + nfc.NfcDevice.version())
+CONFIG_FILE_PATH = os.environ["NFC_LOC_CONFIG_FILE"] or "config.yaml"
 
-dev = nfc.NfcDevice()
+config = None
 
-print(dev.name, dev.connection_string)
-
-for tag in dev:
-    try:
-        print(tag.uid)
-        print(tag.info)
+with open(CONFIG_FILE_PATH, 'r') as f:
+    config = yaml.safe_load(f)
     
-        print("Select app A0000001020304")
-        res = tag.sendApdu(0x00, 0xA4, 0x04, 0x00, bytes.fromhex('A0000001020304'))
-        print("ANS: ", res)
-        
-        
-    except:
-        pass
+reader = NfcReader(config.nfc)
+
+while True:
+    attrs = reader.next()
+    
+    print(attrs)
+
+
+
