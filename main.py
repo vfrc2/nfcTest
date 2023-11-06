@@ -1,14 +1,13 @@
-import nfc_wrapper as nfc
+import nfc.nfc as nfc
 
-print('NFC libnfc version ' + nfc.NfcManager.version())
+print('NFC libnfc version ' + nfc.NfcDevice.version())
 
-mng = nfc.NfcManager()
-
-# mng.list_devices(2)
-
-dev = mng.open()
+dev = nfc.NfcDevice()
 
 print(dev.name, dev.connection_string)
 
 for tag in dev:
-    print(tag)
+    print(tag.uid)
+    print(tag.info)
+    
+    tag.sendApdu(0x00, 0xA4, 0x04, 0x00, bytes.fromhex('A0000001020304'), 2)
