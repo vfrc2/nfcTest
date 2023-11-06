@@ -7,7 +7,14 @@ dev = nfc.NfcDevice()
 print(dev.name, dev.connection_string)
 
 for tag in dev:
-    print(tag.uid)
-    print(tag.info)
+    try:
+        print(tag.uid)
+        print(tag.info)
     
-    tag.sendApdu(0x00, 0xA4, 0x04, 0x00, bytes.fromhex('A0000001020304'), 2)
+        print("Select app A0000001020304")
+        res = tag.sendApdu(0x00, 0xA4, 0x04, 0x00, bytes.fromhex('A0000001020304'))
+        print("ANS: ", res)
+        
+        
+    except:
+        pass

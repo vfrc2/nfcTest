@@ -1,6 +1,6 @@
 import enum
 from nfc.libnfc_wraper import *
-
+from struct import pack, unpack
 
 class NfcModulations(enum.Enum):
   NMT_ISO14443A = 1
@@ -93,46 +93,40 @@ class NfcDevice:
         
         self.name = libnfc.nfc_device_get_name(self._device).decode('utf-8')
     
-    def sendApdu(self, cla: bytes, ins: bytes, p1: bytes, p2: bytes, data: bytes = None, resLen: bytes = None):
-        cmd = bytearray([cla,ins,p1,p2])
-        
-        dataLen = None
-        
-        if not data == None:
-            dataLen = len(data)
-            
-        if not dataLen == None:
-            cmd.append(dataLen)
-        
-        cmd.extend(data)
-        
-        if not resLen == None:
-            cmd.append(resLen)
-            
-        cmd_c = (ctypes.c_uint8 * len(cmd))(*cmd)
-        
-        cmd_c_p = ctypes.cast(cmd_c, ctypes.POINTER(ctypes.c_uint8))
-        
-        resCount = libnfc.nfc_target_send_bytes(self._device, cmd_c_p, len(cmd), 0)
-        if resCount < 0:
-            error = libnfc.nfc_strerror(self._device)
-            raise Exception('Error send data to target', error.decode('utf-8'))
+    def sendApdu(self, cla: bytes, ins: bytes, p1: bytes, p2: bytes, data: bytes = None, mrl=0):
+        apdu = bytearray([cla, ins, p1, p2])
 
-        print(f"Send {resCount} of {len(cmd)}")
+        # if not self._extended_length_support:
+        if data and len(data) > 255:
+            raise ValueError("unsupported command data length")
+        if mrl and mrl > 256:
+            raise ValueError("unsupported max response length")
+        if data:
+            apdu += pack('>B', len(data)) + bytes(data)
+        if mrl > 0:
+            apdu += pack('>B', 0 if mrl == 256 else mrl)
         
-        total_res_len = 2 + (resLen if resLen != None else 0) 
+        cdata = (ctypes.c_char * len(apdu))(*apdu)
         
-        res_c = (ctypes.c_uint8 * total_res_len)()
-        res_c_p = ctypes.cast(res_c, ctypes.POINTER(ctypes.c_uint8))
+        cdata_p = ctypes.cast(cdata, ctypes.POINTER(ctypes.c_char))
+        crecieve = (ctypes.c_char * 6)()
+        crecieve_p = ctypes.cast(crecieve, ctypes.POINTER(ctypes.c_char))
         
-        resCount = libnfc.nfc_target_receive_bytes(self._device, res_c_p, total_res_len, 0)
-        
-        if resCount < 0:
-            error = libnfc.nfc_strerror(self._device)
-            raise Exception('Error read data from target', error.decode('utf-8'))
-        
-        print(f"Receive {resCount}: {res_c[0]} {res_c[1]}")
-        pass
+        recCount = libnfc.nfc_initiator_transceive_bytes(self._device, 
+                                                       cdata_p, len(apdu),
+                                                       crecieve_p, 6,
+                                                       0)        
+
+        apdu = bytes(crecieve)
+
+        if not apdu or len(apdu) < 2:
+            raise Exception('PROTOCOL_ERROR')
+
+        if apdu[-2:] != b"\x90\x00":
+            return False
+
+        return True
+
     
     def next(self) -> NfcTag:
         target = nfc_target()

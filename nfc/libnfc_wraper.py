@@ -162,3 +162,6 @@ libnfc.nfc_target_send_bytes.restype = ctypes.c_int
 
 libnfc.nfc_target_receive_bytes.argtypes = [nfc_device_p,ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t, ctypes.c_int]
 libnfc.nfc_target_send_bytes.restype = ctypes.c_int
+
+libnfc.nfc_initiator_transceive_bytes.argtypes = [nfc_device_p, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t,  ctypes.c_int]
+libnfc.nfc_initiator_transceive_bytes.restype = ctypes.c_int
