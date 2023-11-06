@@ -1,6 +1,12 @@
+import sys
 import ctypes
 
-libnfc = ctypes.CDLL('./deps/libnfc/libnfc.dll')
+libnfc: ctypes.CDLL
+
+if sys.platform == 'win32':
+    libnfc = ctypes.CDLL('./deps/libnfc/libnfc.dll')
+else:
+    libnfc = ctypes.CDLL('libnfc')
 
 class nfc_context(ctypes.Structure):
     __fields__ = []
