@@ -1,3 +1,3 @@
 nfc:
   device: auto
-  aid: A0000001020304
+  aid: F0010203040508

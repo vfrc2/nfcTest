@@ -1,6 +1,11 @@
 import enum
 from nfc.libnfc_wraper import *
 from struct import pack, unpack
+import asyncio
+
+def to_hex_str(bytearray):
+    return ''.join('{:02X} '.format(x) for x in bytearray)
+    
 
 class NfcModulations(enum.Enum):
   NMT_ISO14443A = 1
@@ -109,23 +114,29 @@ class NfcDevice:
         cdata = (ctypes.c_char * len(apdu))(*apdu)
         
         cdata_p = ctypes.cast(cdata, ctypes.POINTER(ctypes.c_char))
-        crecieve = (ctypes.c_char * 6)()
+        crecieve = (ctypes.c_char * mrl)()
         crecieve_p = ctypes.cast(crecieve, ctypes.POINTER(ctypes.c_char))
+        
+        print("SEND", to_hex_str(apdu))
         
         recCount = libnfc.nfc_initiator_transceive_bytes(self._device, 
                                                        cdata_p, len(apdu),
-                                                       crecieve_p, 6,
+                                                       crecieve_p, mrl,
                                                        0)        
+        if (recCount < 0):
+            raise Exception('PROTOCOL_ERROR_DEVICE_NOT_SEND_BYTES')
 
-        apdu = bytes(crecieve)
+        apdu = bytes(crecieve[0:recCount])
+        
+        print("RECIEVE", to_hex_str(apdu))
 
         if not apdu or len(apdu) < 2:
             raise Exception('PROTOCOL_ERROR')
 
         if apdu[-2:] != b"\x90\x00":
-            return False
+            raise Exception('Error response', apdu)
 
-        return True
+        return apdu
 
     
     def next(self) -> NfcTag:
@@ -172,7 +183,7 @@ class NfcTag:
         
         strBuf = ctypes.c_char_p()
         
-        libnfc.str_nfc_target(ctypes.pointer(strBuf), ctypes.pointer(target), True)\
+        libnfc.str_nfc_target(ctypes.pointer(strBuf), ctypes.pointer(target), True)
         
         self.info = strBuf.value.decode('utf-8')
         
@@ -183,4 +194,8 @@ class NfcTag:
     # |   cla   |   ins   |   p1    |   p2    |   LC           |   data    |   LE           |
     # |  1 byte |  1 byte |  1 byte |  1 byte |  0,1 or 3 byte |  LC bytes |  0,1 or 3 byte |
     def sendApdu(self, *args):
-        self._device.sendApdu(*args)
+        return self._device.sendApdu(*args)
+        
+    async def waitTagRelease(self):
+        while libnfc.nfc_initiator_target_is_present(self._device._device, None) == 0:
+            await asyncio.sleep(1)

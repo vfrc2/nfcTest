@@ -133,6 +133,7 @@ class nfc_target(ctypes.Structure):
 nfc_context_p = ctypes.POINTER(nfc_context)
 nfc_connstr = ctypes.c_char * 1024
 nfc_device_p = ctypes.POINTER(nfc_device)
+nfc_target_p = ctypes.POINTER(nfc_target)
 
 libnfc.nfc_version.restype = ctypes.c_char_p
 
@@ -165,3 +166,6 @@ libnfc.nfc_target_send_bytes.restype = ctypes.c_int
 
 libnfc.nfc_initiator_transceive_bytes.argtypes = [nfc_device_p, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t,  ctypes.c_int]
 libnfc.nfc_initiator_transceive_bytes.restype = ctypes.c_int
+
+libnfc.nfc_initiator_target_is_present.argtypes = [nfc_device_p, nfc_target_p]
+libnfc.nfc_initiator_target_is_present.restype = ctypes.c_int
